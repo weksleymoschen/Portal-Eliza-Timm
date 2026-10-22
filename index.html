@@ -43,23 +43,56 @@ async function load(){
 load();
 
 
-const ADMIN_API='https://jrhpgtjhtpbkfcwzrrbz.supabase.co/functions/v1/school-portal-admin'; let password=sessionStorage.getItem('eliza_admin_password')||'';
-const $=id=>document.getElementById(id);
-function req(action,opt={}){opt.headers=Object.assign({'x-admin-password':password},opt.headers||{});return fetch(ADMIN_API+'?action='+action,opt)}
-async function adminEnter(){
- password=$('adm_password').value||password;$('adm_loginmsg').textContent='Verificando...';
- try{const r=await req('list');const j=await r.json();if(!r.ok)throw new Error(j.error||'Senha incorreta.');sessionStorage.setItem('eliza_admin_password',password);$('adm_login').classList.add('hide');$('adm_panel').classList.remove('hide');$('adm_loginmsg').textContent='';adminRender(j.documents||[]);}catch(e){$('adm_loginmsg').textContent=e.message}
+const ADMIN_API='https://jrhpgtjhtpbkfcwzrrbz.supabase.co/functions/v1/school-portal-admin';
+let adminToken=sessionStorage.getItem('eliza_admin_token')||'';
+const adm=id=>document.getElementById(id);
+async function adminReq(action,opt={}){
+  opt.headers=Object.assign({},opt.headers||{});
+  if(adminToken) opt.headers.Authorization='Bearer '+adminToken;
+  return fetch(ADMIN_API+'?action='+action,opt);
 }
-$('adm_enter').onclick=enter;$('adm_password').addEventListener('keydown',e=>{if(e.key==='Enter')adminEnter()});
-$('adm_logout').onclick=()=>{sessionStorage.removeItem('eliza_admin_password');location.reload()};
-async function adminLoad(){const r=await req('list');const j=await r.json();if(r.ok)adminRender(j.documents||[])}
-$('adm_upload').onclick=async()=>{const f=$('adm_file').files[0],t=$('adm_title').value.trim(),m=$('adm_msg');if(!t||!f){m.className='err';m.textContent='Informe o nome e escolha um PDF.';return}if(f.type!=='application/pdf'){m.className='err';m.textContent='Escolha um arquivo PDF.';return}m.className='note';m.textContent='Enviando documento...';const fd=new FormData();fd.append('title',t);fd.append('description',$('adm_desc').value.trim());fd.append('is_published',$('adm_published').value);fd.append('file',f);try{const r=await req('upload',{method:'POST',body:fd});const j=await r.json();if(!r.ok)throw new Error(j.error||'Erro ao enviar.');m.className='ok';m.textContent='Documento salvo. Se publicado, já está disponível para as famílias.';$('adm_title').value='';$('adm_desc').value='';$('adm_file').value='';await adminLoad();}catch(e){m.className='err';m.textContent=e.message}};
-function adminRender(d){$('adm_list').innerHTML=d.length?d.map(x=>`<div class="item"><b>${adminEsc(x.title)}</b><br><span class="badge ${x.is_published?'':'off'}">${x.is_published?'PUBLICADO':'OCULTO'}</span><div class="actions"><button onclick="toggleDoc(${x.id},${!x.is_published})">${x.is_published?'Ocultar':'Publicar'}</button><button class="danger" onclick="delDoc(${x.id})">Excluir</button></div></div>`).join(''):'<p class="note">Nenhum documento cadastrado ainda.</p>'}
-window.toggleDoc=async(id,v)=>{const r=await req('update',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,is_published:v})});if(r.ok)adminLoad();else alert('Não foi possível alterar o documento.')};
-window.delDoc=async id=>{if(!confirm('Excluir este documento?'))return;const r=await req('delete&id='+id,{method:'DELETE'});if(r.ok)adminLoad();else alert('Não foi possível excluir o documento.')};
+async function adminEnter(){
+  const password=adm('adm_password').value;
+  const msg=adm('adm_loginmsg');
+  if(!password){msg.textContent='Digite a senha.';return}
+  msg.textContent='Entrando...';
+  try{
+    const r=await fetch(ADMIN_API+'?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password})});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Senha incorreta.');
+    adminToken=j.token; sessionStorage.setItem('eliza_admin_token',adminToken);
+    adm('adm_password').value='';
+    adm('adm_login').classList.add('hide'); adm('adm_panel').classList.remove('hide'); msg.textContent='';
+    await adminLoad();
+  }catch(e){msg.textContent=e.message||'Não foi possível entrar.'}
+}
+adm('adm_enter').onclick=adminEnter;
+adm('adm_password').addEventListener('keydown',e=>{if(e.key==='Enter')adminEnter()});
+adm('adm_logout').onclick=async()=>{try{await adminReq('logout',{method:'POST'})}catch(e){} sessionStorage.removeItem('eliza_admin_token');adminToken='';adm('adm_panel').classList.add('hide');adm('adm_login').classList.remove('hide')};
+async function adminLoad(){
+  const r=await adminReq('list'); const j=await r.json();
+  if(r.status===401){sessionStorage.removeItem('eliza_admin_token');adminToken='';adm('adm_panel').classList.add('hide');adm('adm_login').classList.remove('hide');return}
+  if(r.ok) adminRender(j.documents||[]);
+}
+adm('adm_upload').onclick=async()=>{
+  const f=adm('adm_file').files[0],t=adm('adm_title').value.trim(),m=adm('adm_msg');
+  if(!t||!f){m.className='err';m.textContent='Informe o nome e escolha um PDF.';return}
+  if(f.type!=='application/pdf'){m.className='err';m.textContent='Escolha um arquivo PDF.';return}
+  m.className='note';m.textContent='Enviando documento...';
+  const fd=new FormData();fd.append('title',t);fd.append('description',adm('adm_desc').value.trim());fd.append('is_published',adm('adm_published').value);fd.append('file',f);
+  try{
+    const r=await adminReq('upload',{method:'POST',body:fd});const j=await r.json();if(!r.ok)throw new Error(j.error||'Erro ao enviar.');
+    m.className='ok';m.textContent='Documento salvo. Se publicado, já aparece no Portal da Família.';
+    adm('adm_title').value='';adm('adm_desc').value='';adm('adm_file').value='';await adminLoad();load();
+  }catch(e){m.className='err';m.textContent=e.message}
+};
+function adminRender(d){
+  adm('adm_list').innerHTML=d.length?d.map(x=>`<div class="item"><b>${adminEsc(x.title)}</b><br><span class="badge ${x.is_published?'':'off'}">${x.is_published?'PUBLICADO':'OCULTO'}</span><div class="actions"><button onclick="toggleDoc(${x.id},${!x.is_published})">${x.is_published?'Ocultar':'Publicar'}</button><button class="danger" onclick="delDoc(${x.id})">Excluir</button></div></div>`).join(''):'<p class="note">Nenhum documento cadastrado ainda.</p>'
+}
+window.toggleDoc=async(id,v)=>{const r=await adminReq('update',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,is_published:v})});if(r.ok){adminLoad();load()}else alert('Não foi possível alterar o documento.')};
+window.delDoc=async id=>{if(!confirm('Excluir este documento?'))return;const r=await adminReq('delete&id='+id,{method:'DELETE'});if(r.ok){adminLoad();load()}else alert('Não foi possível excluir o documento.')};
 function adminEsc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
-if(password)adminEnter();
-
+if(adminToken){adminLoad().then(()=>{if(adminToken){adm('adm_login').classList.add('hide');adm('adm_panel').classList.remove('hide')}});}
 function showAdmin(){document.getElementById('familyView').style.display='none';document.getElementById('adminView').style.display='block';document.getElementById('modeBtn').style.display='none';window.scrollTo(0,0)}
 function showFamily(){document.getElementById('adminView').style.display='none';document.getElementById('familyView').style.display='block';document.getElementById('modeBtn').style.display='block';window.scrollTo(0,0);load()}
 </script></body></html>
