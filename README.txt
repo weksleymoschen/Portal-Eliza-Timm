@@ -1,7 +1,12 @@
-PORTAL ÚNICO EMEF ELIZA TIMM
-Abra somente index.html.
-O Portal da Família abre primeiro.
-Há um único botão “Administração” no canto inferior.
-Ao tocar, abre a administração na mesma plataforma; para administrar é necessário informar a senha.
-Tudo publicado pelo administrador aparece automaticamente na área da família.
-Sem QR Code interno.
+PORTAL EMEF ELIZA TIMM — VERSÃO DEFINITIVA
+
+- Um único site.
+- Portal da Família abre primeiro.
+- Botão Administração no próprio portal.
+- Administração protegida por senha.
+- Ao criar uma publicação, a escola escolhe onde ela aparecerá:
+  Comunicados, Calendário, Documentos, Galeria ou A Escola.
+- Publicações marcadas como publicadas aparecem automaticamente para as famílias.
+- É possível ocultar e excluir.
+- Fachada aprovada sem pessoas.
+- Não há QR Code dentro da plataforma.
