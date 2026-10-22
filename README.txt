@@ -1,5 +1,7 @@
-EMEF ELIZA TIMM - PORTAL INTEGRADO
-index.html = Portal da Família (sem acesso ao administrador)
-admin.html ou /admin/ = Administração
-Não há QR Code dentro da plataforma.
-Os documentos são salvos online e os publicados aparecem automaticamente no Portal da Família.
+PORTAL ÚNICO EMEF ELIZA TIMM
+Abra somente index.html.
+O Portal da Família abre primeiro.
+Há um único botão “Administração” no canto inferior.
+Ao tocar, abre a administração na mesma plataforma; para administrar é necessário informar a senha.
+Tudo publicado pelo administrador aparece automaticamente na área da família.
+Sem QR Code interno.
